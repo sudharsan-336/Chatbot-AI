@@ -13,14 +13,12 @@ export const AppContextProvider = ({ children }) => {
     const [selectedChat, setSelectedChat] = useState(null);
     const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
 
-    // Fetch Chats
-    const fetchChats = async () => {
-        setChats(dummyChats);
-    };
-
-    // Fetch User
     const fetchUser = async () => {
         setUser(dummyUserData);
+    };
+
+    const fetchUserChats = async () => {
+        setChats(dummyChats);
         setSelectedChat(dummyChats[0]);
     };
 
@@ -31,12 +29,13 @@ export const AppContextProvider = ({ children }) => {
         } else {
             document.documentElement.classList.remove('dark');
         }
+        localStorage.setItem('theme', theme);
     }, [theme]);
 
     // Load chats when user exists
     useEffect(() => {
         if (user) {
-            fetchChats();
+            fetchUserChats();
         } else {
             setChats([]);
             setSelectedChat(null);
@@ -49,23 +48,15 @@ export const AppContextProvider = ({ children }) => {
     }, []);
 
     const value = {
-        navigate,
-        user,
-        setUser,
-        fetchUser,
-        chats,
-        setChats,
-        selectedChat,
-        setSelectedChat,
-        theme,
-        setTheme
-    };
+        navigate, user, setUser, fetchUser, chats, setChats, selectedChat, 
+        setSelectedChat, theme, setTheme
+    }
 
     return (
         <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>
-    );
-};
+    )
+}
 
 export const useAppContext = () => useContext(AppContext);
