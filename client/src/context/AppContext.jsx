@@ -19,7 +19,7 @@ export const AppContextProvider = ({ children }) => {
 
     const fetchUserChats = async () => {
         setChats(dummyChats);
-        setSelectedChat(dummyChats[0]);
+        setSelectedChat(dummyChats[0])
     };
 
     // Apply Theme
