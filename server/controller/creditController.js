@@ -7,21 +7,35 @@ const plans = [
         name: "Basic",
         price: 10,
         credits: 100,
-        features: ['100 text generations', '50 image generations', 'Standard support', 'Access to basic models']
+        features: [
+            '100 text or image generations',
+            'Standard support',
+            'Access to basic models'
+        ]
     },
     {
         _id: "pro",
         name: "Pro",
         price: 20,
         credits: 500,
-        features: ['500 text generations', '200 image generations', 'Priority support', 'Access to pro models', 'Faster response time']
+        features: [
+            '500 text or image generations', // ✅ Fixed
+            'Priority support',
+            'Access to pro models',
+            'Faster response time'
+        ]
     },
     {
         _id: "premium",
         name: "Premium",
         price: 30,
         credits: 1000,
-        features: ['1000 text generations', '500 image generations', '24/7 VIP support', 'Access to premium models', 'Dedicated account manager']
+        features: [
+            '1000 text or image generations', // ✅ Fixed
+            '24/7 VIP support',
+            'Access to premium models',
+            'Dedicated account manager'
+        ]
     }
 ];
 
@@ -34,9 +48,7 @@ export const getPlan = async (req, res) => {
     }
 }
 
-
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 
 // API Controller to purchase a subscription plan
 export const purchasePlan = async (req, res) => {
@@ -49,23 +61,22 @@ export const purchasePlan = async (req, res) => {
             return res.json({ success: false, message: "Invalid plan" })
         }
 
-
-        // Create new Transaction
+        // ✅ Fixed: status should be boolean false not string "false"
         const transaction = await Transaction.create({
             userId: userId,
             planId: plan._id,
             amount: plan.price,
             credits: plan.credits,
-            status: "false"
+            status: false // ✅ boolean
         })
-        
-        const {origin} = req.headers;
+
+        const { origin } = req.headers;
         const session = await stripe.checkout.sessions.create({
             line_items: [
                 {
                     price_data: {
                         currency: 'usd',
-                        unit_amount: plan.price * 100, 
+                        unit_amount: plan.price * 100,
                         product_data: {
                             name: plan.name
                         }
@@ -76,11 +87,11 @@ export const purchasePlan = async (req, res) => {
             mode: 'payment',
             success_url: `${origin}/loading`,
             cancel_url: `${origin}`,
-            metadata: {transactionId: transaction._id.toString()},
-            expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // Session expires in 30 Minutes
+            metadata: { transactionId: transaction._id.toString() },
+            expires_at: Math.floor(Date.now() / 1000) + (30 * 60),
         });
 
-        res.json({ success: true, url: session.url})
+        res.json({ success: true, url: session.url })
 
     } catch (error) {
         res.json({ success: false, message: error.message })

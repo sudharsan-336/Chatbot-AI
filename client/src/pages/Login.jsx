@@ -1,14 +1,45 @@
-import React, { useState } from 'react'
+import React, { useState } from 'react';
+import { useAppContext } from '../context/AppContext';
+import { toast } from 'react-hot-toast';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
-
   const [state, setState] = useState("login");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const { setToken, fetchUser } = useAppContext();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Use environment variable for backend URL
+    const BASE_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5000";
+    const url = state === "login" 
+      ? `${BASE_URL}/api/user/login` 
+      : `${BASE_URL}/api/user/register`;
+
+    try {
+      const { data } = await axios.post(url, { name, email, password });
+
+      if (data.success) {
+        // Save token
+        setToken(data.token);
+        localStorage.setItem("token", data.token);
+
+        // Fetch user immediately
+        await fetchUser();
+
+        toast.success(`${state === "login" ? "Logged in" : "Account created"} successfully!`);
+        navigate('/');
+      } else {
+        toast.error(data.message || "Something went wrong");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || error.message || "Network error");
+    }
   };
 
   return (
@@ -78,9 +109,8 @@ const Login = () => {
       >
         {state === "register" ? "Create Account" : "Login"}
       </button>
-
     </form>
-  )
-}
+  );
+};
 
-export default Login
+export default Login;
