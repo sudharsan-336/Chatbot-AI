@@ -1,2 +1,11 @@
-node_modules
+# Ignore node_modules in both subdirectories
+client/node_modules/
+server/node_modules/
+
+# Ignore environment variables
+client/.env
+server/.env
 .env
+
+# Ignore build folders
+client/dist/
