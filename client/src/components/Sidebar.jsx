@@ -71,9 +71,8 @@ const Sidebar = ({ isMenuOpen, setIsMenuOpen }) => {
       className={`flex flex-col h-screen min-w-72 p-5
       dark:bg-gradient-to-b from-[#242124]/30 to-[#000000]/30
       border-r border-[#80609F]/30 backdrop-blur-3xl
-      transition-all duration-500 max-md:absolute left-0 z-10 ${
-        !isMenuOpen ? 'max-md:-translate-x-full' : 'translate-x-0'
-      }`}
+      transition-all duration-500 max-md:absolute left-0 z-10 ${!isMenuOpen ? 'max-md:-translate-x-full' : 'translate-x-0'
+        }`}
     >
       {/* Logo */}
       <img
