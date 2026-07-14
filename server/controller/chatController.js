@@ -16,10 +16,10 @@ export const createChat = async (req, res) => {
         await Chat.create(chatData);
         res.json({ success: true, message: "Chat created successfully" });
     } catch (error) {
-         res.json({ success: false, message: error.message });
+        res.json({ success: false, message: error.message });
     }
 }
- 
+
 // API Controller for fetching all chats of a user
 export const getChats = async (req, res) => {
     try {
@@ -28,7 +28,7 @@ export const getChats = async (req, res) => {
 
         res.json({ success: true, chats });
     } catch (error) {
-         res.json({ success: false, message: error.message });
+        res.json({ success: false, message: error.message });
     }
 }
 
@@ -42,6 +42,6 @@ export const deleteChat = async (req, res) => {
 
         res.json({ success: true, message: "Chat deleted successfully" });
     } catch (error) {
-         res.json({ success: false, message: error.message });
+        res.json({ success: false, message: error.message });
     }
 }
