@@ -5,26 +5,22 @@ import imagekit from "../configs/imageKit.js";
 import openai from "../configs/openai.js";
 import { tavily } from "@tavily/core";
 
-// ✅ Tavily web search client
+// Tavily web search client
 const tavilyClient = tavily({ apiKey: process.env.TAVILY_API_KEY });
 
-// ✅ Web search helper (IMPROVED)
+// Web search helper
 const searchWeb = async (query) => {
   try {
     const currentYear = new Date().getFullYear();
-    const enhancedQuery = `${query} ${currentYear} latest news today`;
-
+    const enhancedQuery = `${query} ${currentYear}`;
     console.log("🔍 Searching web for:", enhancedQuery);
-
     const result = await tavilyClient.search(enhancedQuery, {
       maxResults: 5,
       searchDepth: "advanced",
     });
-
     const webData = result.results
       .map((r) => `${r.title}: ${r.content}`)
       .join("\n\n");
-
     console.log("✅ Web search done!");
     return webData;
   } catch (error) {
@@ -33,7 +29,7 @@ const searchWeb = async (query) => {
   }
 };
 
-// ✅ Retry helper for 429 rate limit errors
+// Retry helper for 429 rate limit errors
 const retryWithBackoff = async (fn, retries = 3, delay = 2000) => {
   for (let i = 0; i < retries; i++) {
     try {
@@ -41,7 +37,6 @@ const retryWithBackoff = async (fn, retries = 3, delay = 2000) => {
     } catch (error) {
       const status = error?.status || error?.response?.status;
       const is429 = status === 429;
-
       if (is429 && i < retries - 1) {
         console.log(`⚠️ Rate limited. Retrying in ${delay}ms... (${i + 1}/${retries})`);
         await new Promise((res) => setTimeout(res, delay));
@@ -53,14 +48,12 @@ const retryWithBackoff = async (fn, retries = 3, delay = 2000) => {
   }
 };
 
-// ✅ Helper: Reset daily credits if new day
+// Helper: Reset daily credits if new day
 const resetDailyCreditsIfNeeded = (user) => {
   const now = new Date();
   const last = new Date(user.lastCreditReset);
-
   const nowDate = now.toISOString().split("T")[0];
   const lastDate = last.toISOString().split("T")[0];
-
   if (nowDate !== lastDate) {
     user.credits = 50;
     user.lastCreditReset = now;
@@ -68,9 +61,7 @@ const resetDailyCreditsIfNeeded = (user) => {
   }
 };
 
-// ==========================
-// ✅ TEXT MESSAGE CONTROLLER
-// ==========================
+// TEXT MESSAGE CONTROLLER
 export const textMessageController = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -92,7 +83,6 @@ export const textMessageController = async (req, res) => {
     const chat = await Chat.findOne({ userId, _id: chatId });
     if (!chat) return res.json({ success: false, message: "Chat not found" });
 
-    // ✅ Save user message
     chat.messages.push({
       role: "user",
       content: prompt,
@@ -100,23 +90,17 @@ export const textMessageController = async (req, res) => {
       isImage: false,
     });
 
-    // ✅ Always search web
     const webResults = await searchWeb(prompt);
-
     const today = new Date().toISOString().split("T")[0];
 
     let messages;
-
     if (webResults) {
       messages = [
         {
           role: "system",
-          content: `You are a helpful AI assistant called QuickGPT. Today's date is ${today}. Use the following real-time web search results to answer the user's question accurately and in detail:\n\n${webResults}\n\nIf the web data contains the answer, use it. Otherwise use your own knowledge.`,
+          content: `You are a helpful AI assistant called QuickGPT. Today's date is ${today}. Use the following real-time web search results to answer the user's question accurately:\n\n${webResults}\n\nIf the web data contains the answer, use it. Otherwise use your own knowledge.`,
         },
-        {
-          role: "user",
-          content: prompt,
-        },
+        { role: "user", content: prompt },
       ];
     } else {
       messages = [
@@ -124,29 +108,28 @@ export const textMessageController = async (req, res) => {
           role: "system",
           content: `You are a helpful AI assistant called QuickGPT. Today's date is ${today}. Answer the user's questions accurately and in detail.`,
         },
-        {
-          role: "user",
-          content: prompt,
-        },
+        { role: "user", content: prompt },
       ];
     }
 
-    // ✅ Call AI model with retry
     const { choices } = await retryWithBackoff(() =>
       openai.chat.completions.create({
-        model: "gemini-3-flash-preview",
+        model: "gemini-2.5-flash", // FIXED (Groq model)
         messages: messages,
+        temperature: 0.7,
       })
     );
 
+    const replyText = choices[0].message.content;
+
     const reply = {
-      ...choices[0].message,
+      role: "assistant",
+      content: replyText,
       timestamp: Date.now(),
       isImage: false,
     };
 
     chat.messages.push(reply);
-
     user.credits -= 1;
     user.dailyCreditsUsed += 1;
 
@@ -157,23 +140,19 @@ export const textMessageController = async (req, res) => {
 
   } catch (error) {
     console.log("REAL ERROR:", JSON.stringify(error, null, 2));
-
     const status = error?.status || error?.response?.status;
-
     if (status === 429) {
       return res.json({
         success: false,
         message: "AI is busy right now, please wait a few seconds and try again",
       });
     }
-
     res.json({ success: false, message: error.message });
   }
 };
 
-// ==========================
-// ✅ IMAGE MESSAGE CONTROLLER
-// ==========================
+
+// IMAGE MESSAGE CONTROLLER
 export const imageMessageController = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -202,14 +181,22 @@ export const imageMessageController = async (req, res) => {
       isImage: false,
     });
 
-    const encodedPrompt = encodeURIComponent(prompt);
+    // Fixed: Use Pollinations AI instead of ImageKit generation
+    // ImageKit AI generation was causing 500 errors
+    const cleanPrompt = prompt.trim().replace(/\s+/g, '-');
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=800&height=800&nologo=true`;
 
-    const generatedImageUrl = `${process.env.IMAGEKIT_URL_ENDPOINT}/ik-genimg-prompt-${encodedPrompt}/quickgpt/${Date.now()}.png?tr=w-800,h-800`;
+    console.log("🎨 Generating image for:", cleanPrompt);
 
+    // Fetch generated image
     const aiImageResponse = await retryWithBackoff(() =>
-      axios.get(generatedImageUrl, { responseType: "arraybuffer" })
+      axios.get(imageUrl, {
+        responseType: "arraybuffer",
+        timeout: 30000 // 30 second timeout for image generation
+      })
     );
 
+    // Upload to ImageKit for storage
     const base64Image = `data:image/png;base64,${Buffer.from(
       aiImageResponse.data,
       "binary"
@@ -230,7 +217,6 @@ export const imageMessageController = async (req, res) => {
     };
 
     chat.messages.push(reply);
-
     user.credits -= 1;
     user.dailyCreditsUsed += 1;
 
@@ -241,16 +227,13 @@ export const imageMessageController = async (req, res) => {
 
   } catch (error) {
     console.log("REAL ERROR:", JSON.stringify(error, null, 2));
-
     const status = error?.status || error?.response?.status;
-
     if (status === 429) {
       return res.json({
         success: false,
         message: "AI is busy right now, please wait a few seconds and try again! ⏳",
       });
     }
-
     res.json({ success: false, message: error.message });
   }
 };
