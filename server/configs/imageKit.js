@@ -1,9 +1,10 @@
-import ImageKit from "imagekit";
+import OpenAI from "openai";
 
-var imagekit = new ImageKit({
-    publicKey : process.env.IMAGEKIT_PUBLIC_KEY,
-    privateKey : process.env.IMAGEKIT_PRIVATE_KEY,
-    urlEndpoint : process.env.IMAGEKIT_URL_ENDPOINT
+const openai = new OpenAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    timeout: 30000, // 30 second timeout
+    maxRetries: 3,  // Auto retry on failure
 });
 
-export default imagekit;
+export default openai;
