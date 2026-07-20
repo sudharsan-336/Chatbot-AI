@@ -8,13 +8,12 @@ import messageRouter from './routes/messageRoutes.js'
 import creditRouter from './routes/creditRoutes.js'
 import { stripeWebhooks } from './controller/webhooks.js'
 
-
 const app = express()
 
 await connectDB()
 
-// Stripe Webhooks
-app.post('/api/stripe', express.raw({type: 'application/json'}), stripeWebhooks)
+// Stripe Webhook MUST be before express.json()
+app.post('/api/stripe', express.raw({ type: 'application/json' }), stripeWebhooks)
 
 // Middleware
 app.use(cors())
